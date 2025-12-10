@@ -1,0 +1,67 @@
+# 整个工作流的名字，可以写中文
+name: 构建 Python 程序（Kylin OS aarch64）
+
+# 触发条件：推送或手动执行
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+
+  # 定义一个任务，运行在 ubuntu 主机上
+  build-aarch64:
+    name: aarch64 构建任务
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # 步骤 1：拉取代码
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+
+      # 步骤 2：安装 QEMU，让 x86 服务器支持运行 arm64 程序
+      - name: 启用 QEMU 以支持 arm64
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      # 步骤 3：在 arm64 Ubuntu Docker 容器里运行打包流程
+      # 使用 addnab/docker-run-action 可以在 action 里执行容器中的命令
+      - name: 在 arm64 Ubuntu 容器中构建
+        uses: addnab/docker-run-action@v3
+        with:
+          # 使用 Ubuntu aarch64（arm64）镜像
+          image: arm64v8/ubuntu:22.04
+          options: --platform linux/arm64
+          shell: bash
+
+          # 容器内执行的命令
+          run: |
+            echo "== 更新系统包 =="
+            apt-get update
+
+            echo "== 安装 Python3 和 pip =="
+            apt-get install -y python3 python3-pip python3-venv
+
+            echo "== 升级 pip =="
+            pip3 install --upgrade pip
+
+            echo "== 安装 PyInstaller =="
+            pip3 install pyinstaller
+
+            echo "== 安装项目依赖 =="
+            pip3 install -r requirements.txt
+
+            echo "== 使用 PyInstaller 开始打包 =="
+            pyinstaller --onefile src/main.py --name hello-kylin-aarch64
+
+            echo "== 打包输出为 tar.gz =="
+            tar -czf hello-kylin-aarch64.tar.gz dist/hello-kylin-aarch64
+
+      # 步骤 4：上传构建产物
+      - name: 上传产物（可下载）
+        uses: actions/upload-artifact@v4
+        with:
+          name: hello-kylin-aarch64
+          path: hello-kylin-aarch64.tar.gz
