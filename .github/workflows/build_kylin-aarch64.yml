@@ -1,4 +1,4 @@
-# 整个工作流的名字，可以写中文
+# 整个工作流的名字
 name: 构建 Python 程序（Kylin OS aarch64）
 
 # 触发条件：推送或手动执行
@@ -33,11 +33,14 @@ jobs:
         with:
           # 使用 Ubuntu aarch64（arm64）镜像
           image: arm64v8/ubuntu:22.04
-          options: --platform linux/arm64
+          # 挂载工作区到容器内 /workspace
+          options: -v ${{ github.workspace }}:/workspace --platform linux/arm64
           shell: bash
 
           # 容器内执行的命令
           run: |
+            cd /workspace
+
             echo "== 更新系统包 =="
             apt-get update
 
